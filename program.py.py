@@ -27,7 +27,7 @@ minimum = min(List)
 for i in range (0,size):
     List[i] =  255*(float(List[i])-float(minimum))/(float(maximum) - float(minimum))
     List[i] = int(List[i])
-    print(List[i])
+
 
 
 
