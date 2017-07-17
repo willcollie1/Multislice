@@ -3,7 +3,6 @@ The multislice method reduces to a succession of transmission and propagation op
 between each. FFTs are calculated using the FFTW libary. The final wavefunction is outputted to the file called "output.txt" 
 which is used by the python script "program.py" to create an image of the specimin */ 
 
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>    
@@ -14,7 +13,8 @@ which is used by the python script "program.py" to create an image of the specim
 
 int main()
 {
-
+  
+  /* Get input parameters from  the user */ 
   printf("Lattice Parameter (a) in Angstroms:");
   scanf("%lf",&a);
 
@@ -28,13 +28,14 @@ int main()
   scanf("%lf",&v);
 
   printf("Number of Voxels in x direction:");
-  scanf("%d",&height);
+  scanf("%d",&width);
 
   printf("Number of Voxels in y direction:");
-  scanf("%d",&width);
+  scanf("%d",&height);
 
   printf("Number of Voxels in z direction:");
   scanf("%d",&depth);
+  
 
   /* <a b c> Lattice Parameters in Angstroms */
   a = a * angstrom; /* 2.54 */
@@ -42,9 +43,9 @@ int main()
   c = c * angstrom; /* 28.00 */
   
 
-  /* Size of an individual "voxel"  */
-  double dx = (a / height);
-  double dy = (b / width);
+  /* Size of an individual "voxel" */
+  double dx = (a / width);
+  double dy = (b / height);
   double dz = (c / depth);  /* Slicethickness */ 
   int size = height*width*depth; /* The number of potential readings in file */
   int wavefunctionsize = height*width; /* Number of points wavefunction is evaluated at */
@@ -75,7 +76,7 @@ int main()
     y[i] = y[i] * dy;
   }
   
-
+  
   /* Relativistic de broglie wavelength and Interaction parameter (sigma) */ 
   double wavelength = calcwavelength(v);
   double sigma = calcsigma(wavelength); 
@@ -93,21 +94,29 @@ int main()
   double complex *P; 
   P  = malloc((size)*sizeof(double complex));
   for (i=0; i<size; i++){
-    P[i] = cexp(-I*pi*dz*wavelength*(pow((y[i])/(dy*b),2)+pow((x[i])/(dx*a),2)));
+    P[i] = cexp(-I*pi*dz*wavelength*(pow(y[i]/pow(dy,2),2)+pow(x[i]/pow(dx,2),2)));
   }
 
+  /* Setting outer 1/3 of Propogation function = 0 to prevent aliasing effects */
+  int ali1 = height*0.666 + 1;
+  int ali2 = width*0.666 + 1;
+
+    for(j=0;j<depth;j++){
+      for (z=ali1; z<height; z++){
+        for (i=ali2; i<width; i++) {
+          P[wavefunctionsize*j+i + width*z] = 0;
+        }
+       }
+    }
 
   /* Initialising and assigning memory for wavefunction and wavefunction_next */
-  double complex *wavefunction, *wavefunction_next; 
+  double complex *wavefunction; 
   wavefunction = malloc((wavefunctionsize)*sizeof(double complex));
-  wavefunction_next = malloc((wavefunctionsize)*sizeof(double complex));
-  
- 
-    /* Set initial wavefunction equal to 1 */
+
+  /* Set initial wavefunction equal to 1 */
   for (i=0; i<wavefunctionsize; i++){
     wavefunction[i] = 1;
   }
-  
   
   
   /* Initialising and allocating memory for FFT function */
@@ -115,12 +124,12 @@ int main()
   fftw_plan plan;
   fftw_plan planinverse;
   int n[2];
-  n[0] = height;
-  n[1] = width;
+  n[0] = width;
+  n[1] = height;
   in = (fftw_complex*) fftw_malloc(sizeof(fftw_complex) * wavefunctionsize);
   out = (fftw_complex*) fftw_malloc(sizeof(fftw_complex) * wavefunctionsize);
-  plan = fftw_plan_dft_2d(width, height, in, out, FFTW_FORWARD, FFTW_ESTIMATE);
-  planinverse = fftw_plan_dft_2d(width, height, in, out, FFTW_BACKWARD, FFTW_ESTIMATE);
+  plan = fftw_plan_dft_2d(height, width, in, out, FFTW_FORWARD, FFTW_ESTIMATE);
+  planinverse = fftw_plan_dft_2d(height, width, in, out, FFTW_BACKWARD, FFTW_ESTIMATE);
   
    
  /************************************************** Multislice Iteration loop **********************************************************/
@@ -137,6 +146,7 @@ int main()
     for (i=0; i<wavefunctionsize; i++){
       in[i] = wavefunction[i];
     }
+    
     fftw_execute(plan);
 
     
@@ -145,14 +155,17 @@ int main()
       wavefunction[i] = out[i]*P[i+(wavefunctionsize*j)];
     }
     
+    for(i=0; i<wavefunctionsize; i++){
+    in[i] = wavefunction[i];
+    }
+    
     fftw_execute(planinverse);
   
     for (i=0;i<wavefunctionsize;i++){
-      wavefunction_next[i] = out[i] / pow(wavefunctionsize,0.5) ; /* Scaling factor */
+      wavefunction[i] = out[i] / wavefunctionsize ; /* Scaling factor */
     }
 
-    swap_mem(&wavefunction_next,&wavefunction);  /* Swapping memory for each iteration */
-  }
+  } 
   
   /**********************************************End of Multislice Loop **********************************************************/
   
@@ -168,7 +181,7 @@ int main()
     susceptability = malloc((wavefunctionsize)*sizeof(double complex));
     PSF = malloc((wavefunctionsize)*sizeof(double complex));
     for (i=0; i<wavefunctionsize; i++) {
-      susceptability[i] = (2*pi/wavelength)*((0.25*abberation*pow(wavelength,4)*((pow((y[i])/(dy*b),4)+pow(((x[i])/(dx*a)),4))))-(0.5*df*pow(wavelength,2)*((pow((y[i])/(dy*b),2)+pow(((x[i])/(dx*a)),2)))));
+      susceptability[i] = (2*pi/wavelength)*((0.25*abberation*pow(wavelength,4)*((pow(y[i]/pow(dy,2),4)+pow(x[i]/pow(dx,2),4))))-(0.5*df*pow(wavelength,2)*((pow(y[i]/pow(dy,2),2)+pow(x[i]/pow(dy,2),2)))));
       PSF[i] = cexp(-I*susceptability[i]);
     }
     
@@ -185,7 +198,7 @@ int main()
     fftw_execute(planinverse);
 
     for (i=0; i<wavefunctionsize; i++){
-      wavefunction[i] = out[i] / pow(wavefunctionsize,0.5);  /* Scaling factor */ 
+      wavefunction[i] = out[i] / wavefunctionsize;  /* Scaling factor */ 
     }
   
     
@@ -203,6 +216,6 @@ int main()
    fftw_destroy_plan(plan);
    fftw_destroy_plan(planinverse);
    fftw_free(in); fftw_free(out); 
-   free(T), free(P), free(wavefunction), free(wavefunction_next), free(x), free(y), free(V);
+   free(T), free(P), free(wavefunction),free(x), free(y), free(V);
 
 }
