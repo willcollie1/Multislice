@@ -92,10 +92,23 @@ int main()
   k_y2 = malloc((size)*sizeof(double));
   
   for (i=0; i<size;i++) {
-    k_x2[i] = pow((x[i]) / pow(dx,2),2);
-    k_y2[i] = pow((y[i]) / pow(dy,2),2);
+    if (x[i] < (width/2)) {
+      k_x2[i] = pow((x[i]) / (width*pow(dx,2)),2);
+    }
+    else{
+       k_x2[i] = pow((x[i] - width) / (width*pow(dx,2)),2);
+    }
   }
   
+   for (i=0; i<size;i++) {
+    if (y[i] < (height/2)) {
+      k_y2[i] = pow((y[i]) / (height*pow(dy,2)),2);
+    }
+    else{
+       k_y2[i] = pow((y[i] - height) / (height*pow(dy,2)),2);
+    }
+   }
+
   /* Relativistic de broglie wavelength and Interaction parameter (sigma) */ 
   double wavelength = calcwavelength(v);
   double sigma = calcsigma(wavelength,v);
@@ -114,9 +127,6 @@ int main()
   for (i=0; i<size; i++){
     P[i] = cexp(-I*pi*dz*wavelength*(k_x2[i]+k_y2[i]));
   }
-
-
-    
 
   /* Initialising and assigning memory for wavefunction and wavefunction_next */
   double complex *wavefunction; 
@@ -183,8 +193,9 @@ int main()
     }
 
   } 
-  
-  /**********************************************End of Multislice Loop **********************************************************/
+ 
+/*************************** End of Multislice loop **************************************/ 
+
   
     /* Fourier Transform of Exit Wavefunction */ 
     for (i=0; i<wavefunctionsize; i++){
@@ -194,14 +205,17 @@ int main()
     fftw_execute(plan); 
   
     /* Calculating the point spread function (PSF) of the objective lens */
-    double complex *susceptability, *PSF;
-    susceptability = malloc((wavefunctionsize)*sizeof(double complex));
+    double complex *PSF;
+    double *susceptability;
+    susceptability = malloc((wavefunctionsize)*sizeof(double));
     PSF = malloc((wavefunctionsize)*sizeof(double complex));
+
     for (i=0; i<wavefunctionsize; i++) {
       susceptability[i] = (2*pi/wavelength)*((0.25*abberation*pow(wavelength,4)*(pow(pow((k_x2[i]+k_y2[i]),0.5),4)))-(0.5*df*pow(wavelength,2)*(k_x2[i]+k_y2[i])));
       PSF[i] = cexp(-I*susceptability[i]);
     }
     
+
     /* FT of exit wavefunction multiplied by the PSF */ 
     for (i=0; i<wavefunctionsize; i++) {
       wavefunction[i] = out[i]*PSF[i];
@@ -218,16 +232,16 @@ int main()
       wavefunction[i] = out[i] / wavefunctionsize;  /* Scaling factor */ 
     }
   
+
     
   /* Output the Intensity at each point to a file called "output.txt" */ 
   FILE* output;
   output = fopen("output.txt", "w");
   for (i=0; i<wavefunctionsize; i++){   
-    fprintf(output, "%.20lf \n", cabs(wavefunction[i]));
+    fprintf(output, "%.20lf \n", pow(cabs(wavefunction[i]),2)); /* Output the square modulus of the wavefunction */ 
   }
   fclose(output);
    
-
 
    /* Free the dynamic arrays */
    fftw_destroy_plan(plan);
