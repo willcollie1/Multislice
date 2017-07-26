@@ -17,7 +17,7 @@ var = os.system("./multislice")
 #Reads in array parameters from multislice
 parameters = open("size.txt").readlines()
 height = int(parameters[0])
-width = int(parameters[1])
+width = int(parameters[1]) 
 size = height*int(width)
 
 #Read in intensity values from multislice.c and create a list

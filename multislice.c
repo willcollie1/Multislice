@@ -1,11 +1,10 @@
 /* This program uses the "Multislice Algorithm" to simulate the wavefunction for a TEM electron as it passes through a sample.
 The multislice method reduces to a succession of transmission and propagation operations with a Fast Fourier Transform (FFT) in 
-between each. FFTs are calculated using the FFTW libary. The final wavefunction is outputted to the file called "output.txt" 
-which is used by the python script "program.py" to create an image of the specimin */ 
+between each. FFTs are calculated using the FFTW libary. The square modulus of the exit wavefunction is (once abberations are accounted for) outputted to the file called "output.txt", which is used by the python script "program.py" to create an image of the specimin */ 
 
 #include <stdio.h>
 #include <stdlib.h>
-#include <math.h>    
+#include <math.h>    /* Use of pow function */ 
 #include <complex.h> /* Makes the use of complex numbers much easier */
 #include <fftw3.h>  /* Used for FFTs */
 #include "multislice.h" /* Contains definitions and some function declarations */ 
@@ -14,54 +13,40 @@ which is used by the python script "program.py" to create an image of the specim
 int main()
 {
   
-  /* Get input parameters from  the user */ 
-  printf("Lattice Parameter (a) in Angstroms:");
-  scanf("%lf",&a);
-
-  printf("Lattice Parameter (b) in Angstroms:");
-  scanf("%lf",&b);
-
-  printf("Lattice parameter (c) in Angstroms:");
-  scanf("%lf",&c);
-
+  /* Lattice Parameters */ 
+  a = 2.54;
+  b = 4.36;
+  c = 28.00;
+  
+  /* Microscope voltage */ 
   printf("Microscope Voltage (volts):");
   scanf("%lf",&v);
-
-  printf("Number of Voxels in x direction:");
-  scanf("%d",&width);
-
-  printf("Number of Voxels in y direction:");
-  scanf("%d",&height);
-
-  printf("Number of Voxels in z direction:");
-  scanf("%d",&depth);
   
-
+  /* Number of voxels */ 
+  width = 24;
+  height = 40;
+  depth = 240;
+  
   /* <a b c> Lattice Parameters in Angstroms */
   a = a * angstrom; /* 2.54 */
   b = b * angstrom; /* 4.36 */
   c = c * angstrom; /* 28.00 */
   
-
   /* Size of an individual "voxel" */
-  double dx = (a / width);
-  double dy = (b / height);
-  double dz = (c / depth);  /* Slicethickness */ 
-  int size = height*width*depth; /* The number of potential readings in file */
-  int wavefunctionsize = height*width; /* Number of points wavefunction is evaluated at */
-
-      
+  dx = (a / width);
+  dy = (b / height);
+  dz = (c / depth);  /* Slicethickness */ 
+  size = height*width*depth; /* The number of potential readings in file */
+  wavefunctionsize = height*width; /* Number of points wavefunction is evaluated at */
+  
   /* Output the wavefunction parameters to the file "size.text" (used in python script) */ 
   outputparameters();
 
-  
-  /*Allocating memory to store data from potential file in three seperate arrays */ 
-  double *x, *y, *V; 
+  /*Allocating memory to store data from potential file in three seperate arrays */   
   x  = malloc((size)*sizeof(double));
   y  = malloc((size)*sizeof(double));
   V  = malloc((size)*sizeof(double));
 
- 
   /* Reading in the correctly ordered potential file "output1.txt" */ 
     FILE *potential = fopen("output1.txt", "r");
   for (i=0; i<size; i++){
@@ -69,7 +54,6 @@ int main()
   }
   fclose(potential);
 
-  
   /* Converting potentials from Hartrees to Volts (energy to volltage) and positions into metres */ 
   for (i=0; i<size; i++){
     V[i] = V[i] * hartree/charge;  
@@ -77,7 +61,7 @@ int main()
     y[i] = y[i] * dy;
   }
   
-    /* If the potential is concentrated at edge of the unit cell then we can skip to where the atoms are  */ 
+  /* If the potential is concentrated at edge of the unit cell then we can skip to where the atoms are  */ 
   for(i = 0; i<size; i++){
     total = abs(V[i]) + total; /* Sum of all the potentials */
   }
@@ -85,59 +69,33 @@ int main()
     total1 = abs(V[i]) + total1;  /* Sum of all potentials in final 10% */
   }
   
-
-  /* Spatial frequency squared (k^2) */ 
-  double *k_x2,*k_y2;
-  k_x2 = malloc((size)*sizeof(double));
-  k_y2 = malloc((size)*sizeof(double));
+  /* Calculating the Spatial frequency squared (reciprical lattice) */ 
+  k_x2 = malloc((wavefunctionsize)*sizeof(double));
+  k_y2 = malloc((wavefunctionsize)*sizeof(double));
+  calck_x2(width,dx,x);
+  calck_y2(height,dy,y);
   
-  for (i=0; i<size;i++) {
-    if (x[i] < (width/2)) {
-      k_x2[i] = pow((x[i]) / (width*pow(dx,2)),2);
-    }
-    else{
-       k_x2[i] = pow((x[i] - width) / (width*pow(dx,2)),2);
-    }
-  }
-  
-   for (i=0; i<size;i++) {
-    if (y[i] < (height/2)) {
-      k_y2[i] = pow((y[i]) / (height*pow(dy,2)),2);
-    }
-    else{
-       k_y2[i] = pow((y[i] - height) / (height*pow(dy,2)),2);
-    }
-   }
-
   /* Relativistic de broglie wavelength and Interaction parameter (sigma) */ 
-  double wavelength = calcwavelength(v);
-  double sigma = calcsigma(wavelength,v);
-  
-  /* Transmission Function */
-  double complex *T; 
-  T  = malloc((size)*sizeof(double complex));
-  for (i=0; i<size; i++){
-    T[i] = cexp(I*sigma*V[i]*dz);  
-  }
-  
+  wavelength = calcwavelength(v);
+  sigma = calcsigma(wavelength,v);
 
-  /* Propogation Function in k space */
-  double complex *P; 
-  P  = malloc((size)*sizeof(double complex));
-  for (i=0; i<size; i++){
+  /* Dynamic memory allocation for Transmission and Propogation function and wavefunction */ 
+  T  = malloc((wavefunctionsize)*sizeof(double complex));
+  P  = malloc((wavefunctionsize)*sizeof(double complex));
+  wavefunction = malloc((wavefunctionsize)*sizeof(double complex));
+
+
+  /* Propogation Function (k space) */
+  for (i=0; i<wavefunctionsize; i++){
     P[i] = cexp(-I*pi*dz*wavelength*(k_x2[i]+k_y2[i]));
   }
 
-  /* Initialising and assigning memory for wavefunction and wavefunction_next */
-  double complex *wavefunction; 
-  wavefunction = malloc((wavefunctionsize)*sizeof(double complex));
-
-  /* Set initial wavefunction equal to 1 */
+  /* Initialising the wavefunction */
   for (i=0; i<wavefunctionsize; i++){
     wavefunction[i] = 1.;
   }
   
-  /* Defining j loop boundaries (depends where the atoms are located) */ 
+  /* Deciding where multislice loop should start */ 
   if (total1 > 0.1*total){
     loop1 = 0.6*depth;
   }
@@ -146,7 +104,7 @@ int main()
   }
   
   
-  /* Initialising and allocating memory for FFT function */
+  /* Initialising and allocating memory for FFTW function */
   fftw_complex *in, *out;
   fftw_plan plan;
   fftw_plan planinverse;
@@ -158,83 +116,57 @@ int main()
   plan = fftw_plan_dft_2d(height, width, in, out, FFTW_FORWARD, FFTW_ESTIMATE);
   planinverse = fftw_plan_dft_2d(height, width, in, out, FFTW_BACKWARD, FFTW_ESTIMATE);
   
-   
- /************************************************** Multislice Iteration loop **********************************************************/
   
-  /* Looping over the number of slices */ 
+  /**** Multislice Loop ****/ 
   for(j=loop1; j<depth; j++){
-    
-    /* Multiplying the Wavefunction by the Transmission function */ 
     for (i=0; i<wavefunctionsize; i++){
-      wavefunction[i] = T[i+(wavefunctionsize*j)]*wavefunction[i];
+      T[i] = cexp(I*sigma*V[i+j*wavefunctionsize]*dz);  
     }
-
-    /* Taking the 2D Fourier transform of this product */ 
     for (i=0; i<wavefunctionsize; i++){
-      in[i] = wavefunction[i];
-    }
+      in[i] = T[i]*wavefunction[i];
+    }    
     
     fftw_execute(plan);
-
-    
-    /* Multiplying by the Propogation function and taking the Inverse FT  */ 
+ 
     for (i=0; i<wavefunctionsize; i++){
-      wavefunction[i] = out[i]*P[i+(wavefunctionsize*j)];
+      in[i] = out[i]*P[i];
     }
-    
-    for(i=0; i<wavefunctionsize; i++){
-    in[i] = wavefunction[i];
-    }
-    
+     
     fftw_execute(planinverse);
   
     for (i=0;i<wavefunctionsize;i++){
-      wavefunction[i] = out[i] / wavefunctionsize ; /* Scaling factor */
+      wavefunction[i] = out[i] / wavefunctionsize ; 
     }
-
   } 
+  /****End of Multislice Loop****/ 
+
+
+  /* Accounting for Abberations */
+  abbfunction = malloc((wavefunctionsize)*sizeof(double)); /* Abberation function */ 
+  PSF = malloc((wavefunctionsize)*sizeof(double complex)); /* Point spread of "optical transfer function" */
+
+  for (i=0; i<wavefunctionsize; i++){
+    in[i] = wavefunction[i];
+  }
+    
+  fftw_execute(plan); 
  
-/*************************** End of Multislice loop **************************************/ 
+  for (i=0; i<wavefunctionsize; i++){
+    abbfunction[i] = 2*pi/wavelength; /* (pi*wavelength*(k_x2[i]+k_y2[i]))*((0.5*abberation*pow(wavelength,2)*(k_x2[i]+k_y2[i]))-df); */ 
+     PSF[i] = cexp(-I*abbfunction[i]);
+   }
 
-  
-    /* Fourier Transform of Exit Wavefunction */ 
-    for (i=0; i<wavefunctionsize; i++){
-      in[i] = wavefunction[i];
-    }
+  for (i=0; i<wavefunctionsize; i++){
+    in[i] = out[i]*PSF[i];
+  }
     
-    fftw_execute(plan); 
-  
-    /* Calculating the point spread function (PSF) of the objective lens */
-    double complex *PSF;
-    double *susceptability;
-    susceptability = malloc((wavefunctionsize)*sizeof(double));
-    PSF = malloc((wavefunctionsize)*sizeof(double complex));
+  fftw_execute(planinverse);
 
-    for (i=0; i<wavefunctionsize; i++) {
-      susceptability[i] = (2*pi/wavelength)*((0.25*abberation*pow(wavelength,4)*(pow(pow((k_x2[i]+k_y2[i]),0.5),4)))-(0.5*df*pow(wavelength,2)*(k_x2[i]+k_y2[i])));
-      PSF[i] = cexp(-I*susceptability[i]);
-    }
+  for (i=0; i<wavefunctionsize; i++){
+    wavefunction[i] = out[i] / wavefunctionsize;  
+  }
     
-
-    /* FT of exit wavefunction multiplied by the PSF */ 
-    for (i=0; i<wavefunctionsize; i++) {
-      wavefunction[i] = out[i]*PSF[i];
-    }
-    
-    /* Inverse FT and calculate square modulus to get final image intensity */
-    for (i=0; i<wavefunctionsize; i++){
-      in[i] = wavefunction[i];
-    }
-    
-    fftw_execute(planinverse);
-
-    for (i=0; i<wavefunctionsize; i++){
-      wavefunction[i] = out[i] / wavefunctionsize;  /* Scaling factor */ 
-    }
-  
-
-    
-  /* Output the Intensity at each point to a file called "output.txt" */ 
+  /* Outputting the final intensity */ 
   FILE* output;
   output = fopen("output.txt", "w");
   for (i=0; i<wavefunctionsize; i++){   
@@ -243,10 +175,10 @@ int main()
   fclose(output);
    
 
-   /* Free the dynamic arrays */
-   fftw_destroy_plan(plan);
-   fftw_destroy_plan(planinverse);
-   fftw_free(in); fftw_free(out); 
-   free(T), free(P), free(wavefunction),free(x), free(y), free(V), free(k_x2), free(k_y2);
+  /* Free the dynamic arrays */
+  fftw_destroy_plan(plan);
+  fftw_destroy_plan(planinverse);
+  fftw_free(in); fftw_free(out); 
+  free(T), free(P), free(wavefunction),free(x), free(y), free(V), free(k_x2), free(k_y2), free(abbfunction), free(PSF);
 
 }

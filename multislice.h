@@ -1,27 +1,23 @@
 
 /* Constants */
-#define planck 6.6262e-34 /*Plancks constant */
-#define mass 9.11e-31 /* Electron Mass */
+#define planck 6.626176e-34 /*Plancks constant */
+#define mass 9.10938356e-31 /* Electron Mass */
 #define charge 1.60217e-19 /*Electron Charge */
 #define pi 3.14159265359  /* Constant pi */ 
 #define lightspeed 2.99792e8 /* Speed of Light */
 #define lightspeed2 8.98755e16 /* Speed of Light Squared */ 
-#define hartree 4.359e-18 /* How mant hartrees in a Joule */
+#define hartree 4.35974e-18 /* How mant hartrees in a Joule */
 #define angstrom 1e-10 /* Angstrom in metres */
-#define abberation 0.00001 /* Coefficient of Spherical Abberation (Microscope constant) */ 
-#define df 90e-9 /* Defocus */ 
+#define abberation 1e-5 /*Coefficient of Spherical Abberation (Microscope constant) */ 
+#define df 180e-9 /* Defocus */
 
 
+/* Variable declarations */ 
+int i,j,loop1, height,width,depth,size,wavefunctionsize; 
+double a,b,c,v,total,total1,dx,dy,dz,*x,*y,*V,*abbfunction,*k_x2,*k_y2,wavelength,sigma;
+double complex *T,*P,*wavefunction,*PSF;
 
-/* Variables used for looping */ 
-int i,j,z,r = 0; 
-double a,b,c,v,total,total1;
-int loop1;
-int height,width,depth, size;
-
-
-
-
+/* Write width and height to an output file */
 int outputparameters(void){
   FILE* output2;
   output2 = fopen("size.txt", "w");
@@ -29,19 +25,41 @@ int outputparameters(void){
   fclose(output2);
 }
 
+/* Spatial Frequency Calculation (x direction) */ 
+double calck_x2(int width, double dx,double*x){
+  for (i=0; i<wavefunctionsize;i++) {
+    if (x[i] < (width/2)){
+      k_x2[i] = pow((x[i]) / (width*pow(dx,2)),2);
+    }
+    else{
+       k_x2[i] = pow((x[i] - width) / (width*pow(dx,2)),2);
+    }
+  }
+}
+
+/* Spatial frequency Calculation (y direction) */
+double calck_y2(int height, double dy,double*y){
+   for (i=0; i<wavefunctionsize;i++) {
+    if (y[i] < (height/2)) {
+      k_y2[i] = pow((y[i]) / (height*pow(dy,2)),2);
+    }
+    else{
+       k_y2[i] = pow((y[i] - height) / (height*pow(dy,2)),2);
+    }
+   }
+}
 
 
-/* Calculates the wavelength given the accelerating voltage */ 
-double calcwavelength(double v)
-{
-  double wavelength = (planck*lightspeed) / sqrt(charge*v*(2*mass*lightspeed2+charge*v));
+/* Relativistic De broglie wavelength */ 
+double calcwavelength(double v){
+  wavelength = (planck*lightspeed) / sqrt(charge*v*(2*mass*lightspeed2+charge*v));
 }
 
 
 
-/* Calculates the interaction parameter */ 
+/* Interaction parameter */ 
 double calcsigma(double wavelength, double v){
-  double sigma = ((2*pi)/(wavelength*v))*((mass*lightspeed2+charge*v)/(2*mass*lightspeed2+charge*v)); 
+  sigma = ((2*pi)/(wavelength*v))*((mass*lightspeed2+charge*v)/(2*mass*lightspeed2+charge*v)); 
 }
 
 
