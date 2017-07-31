@@ -8,29 +8,30 @@ between each. FFTs are calculated using the FFTW libary. The square modulus of t
 #include <complex.h> /* Makes the use of complex numbers much easier */
 #include <fftw3.h>  /* Used for FFTs */
 #include "multislice.h" /* Contains definitions and some function declarations */ 
+#include <limits.h>
 
 
 int main()
 {
   
-  /* Lattice Parameters */ 
-  a = 2.54;
-  b = 4.36;
-  c = 28.00;
+  /* Lattice Parameters (Angstroms) */ 
+  a = 14.794;  
+  b = 14.794;
+  c = 28.00;  
   
-  /* Microscope voltage */ 
+  /* Microscope Voltage (Volts) */ 
   printf("Microscope Voltage (volts):");
   scanf("%lf",&v);
   
   /* Number of voxels */ 
-  width = 24;
-  height = 40;
-  depth = 240;
+  width = 120;
+  height = 120;
+  depth = 225;
   
   /* <a b c> Lattice Parameters in Angstroms */
-  a = a * angstrom; /* 2.54 */
-  b = b * angstrom; /* 4.36 */
-  c = c * angstrom; /* 28.00 */
+  a = a * angstrom; /* Working with S.I units throughout */  
+  b = b * angstrom; 
+  c = c * angstrom;
   
   /* Size of an individual "voxel" */
   dx = (a / width);
@@ -38,14 +39,26 @@ int main()
   dz = (c / depth);  /* Slicethickness */ 
   size = height*width*depth; /* The number of potential readings in file */
   wavefunctionsize = height*width; /* Number of points wavefunction is evaluated at */
+
+  /* Relativistic de broglie wavelength and Interaction parameter (sigma) */ 
+  wavelength = calcwavelength(v);
+  sigma = calcsigma(wavelength,v);
   
   /* Output the wavefunction parameters to the file "size.text" (used in python script) */ 
   outputparameters();
 
-  /*Allocating memory to store data from potential file in three seperate arrays */   
-  x  = malloc((size)*sizeof(double));
-  y  = malloc((size)*sizeof(double));
-  V  = malloc((size)*sizeof(double));
+ /* Dynamic Memory Allocation */   
+  x  = malloc((size)*sizeof(double)); /* X postion */
+  y  = malloc((size)*sizeof(double)); /* Y position */
+  V  = malloc((size)*sizeof(double)); /* Potential */ 
+  P2 = malloc((size)*sizeof(double complex)); /*Interpolated Potential */ 
+  T  = malloc((wavefunctionsize)*sizeof(double complex)); /* Transmission Function */
+  P  = malloc((wavefunctionsize)*sizeof(double complex)); /* Propogation Function */
+  wavefunction = malloc((wavefunctionsize)*sizeof(double complex)); /* Wavefunction */
+  PSF = malloc((wavefunctionsize)*sizeof(double complex)); /* Optical Transfer function */
+  k_x2 = malloc((wavefunctionsize)*sizeof(double)); /* Spatial Frequency */
+  k_y2 = malloc((wavefunctionsize)*sizeof(double)); /* Spatial Frequency */
+
 
   /* Reading in the correctly ordered potential file "output1.txt" */ 
     FILE *potential = fopen("output1.txt", "r");
@@ -60,7 +73,7 @@ int main()
     x[i] = x[i] * dx;
     y[i] = y[i] * dy;
   }
-  
+
   /* If the potential is concentrated at edge of the unit cell then we can skip to where the atoms are  */ 
   for(i = 0; i<size; i++){
     total = abs(V[i]) + total; /* Sum of all the potentials */
@@ -68,22 +81,46 @@ int main()
   for(i = 0.9*size; i<size; i++){
     total1 = abs(V[i]) + total1;  /* Sum of all potentials in final 10% */
   }
-  
+
+  /* Deciding where multislice loop should start */ 
+  if (total1 > 0.1*total){
+    loop1 = 0.6*depth;
+  }
+  else{
+    loop1 = 0;
+  }
+
   /* Calculating the Spatial frequency squared (reciprical lattice) */ 
-  k_x2 = malloc((wavefunctionsize)*sizeof(double));
-  k_y2 = malloc((wavefunctionsize)*sizeof(double));
   calck_x2(width,dx,x);
   calck_y2(height,dy,y);
+
+  /* Allows us to sample from the unit cell using x and y as if it were a rectangular unit cell */
+  for (i=0; i<size; i++){
+    var = (-y[i])*(sin(pi/6)/cos(pi/6));
+    y[i] = y[i] / cos(pi/6); 
+    x[i] = x[i] - var;
   
-  /* Relativistic de broglie wavelength and Interaction parameter (sigma) */ 
-  wavelength = calcwavelength(v);
-  sigma = calcsigma(wavelength,v);
+    x[i] = x[i] / (dx);
+    y[i] = y[i] / (dy);
+  }
 
-  /* Dynamic memory allocation for Transmission and Propogation function and wavefunction */ 
-  T  = malloc((wavefunctionsize)*sizeof(double complex));
-  P  = malloc((wavefunctionsize)*sizeof(double complex));
-  wavefunction = malloc((wavefunctionsize)*sizeof(double complex));
+  /* Interpolate to get potential (P2) for these non integer coordinates */
+  for (j = loop1; j < depth; j++){
+    for (i=0; i<wavefunctionsize; i++){
+      fx = floor(x[i+wavefunctionsize*j]);
+      fy = floor(y[i+wavefunctionsize*j]);
+      tx = fx + 1;
+      ty = fy + 1;
 
+      tl = (1-(x[i + wavefunctionsize*j] - floor(x[i+wavefunctionsize*j]))) * (y[i + wavefunctionsize*j]-floor(y[i + wavefunctionsize*j]));
+      tr = (x[i + wavefunctionsize*j]- floor(x[i + wavefunctionsize*j])) * (y[i + wavefunctionsize*j] - floor(y[i + wavefunctionsize*j]));
+      bl = (1 - (x[i + wavefunctionsize*j] - floor(x[i + wavefunctionsize*j]))) * (1 - (y[i + wavefunctionsize*j] - floor(y[i + wavefunctionsize*j])));
+      br = (x[i + wavefunctionsize*j] - floor(x[i + wavefunctionsize*j])) * (1 - (y[i + wavefunctionsize*j] - floor(y[i + wavefunctionsize*j])));
+
+      P2[i+wavefunctionsize*j] = (tl * V[wavefunctionsize*j + ty*width + fx ]) + (tr * V[wavefunctionsize*j + ty*width + tx ]) + (bl * V[wavefunctionsize*j + width*fy + fx ]) + (br * V[wavefunctionsize*j + fy*width + tx]);
+
+  } 
+}
 
   /* Propogation Function (k space) */
   for (i=0; i<wavefunctionsize; i++){
@@ -94,15 +131,6 @@ int main()
   for (i=0; i<wavefunctionsize; i++){
     wavefunction[i] = 1.;
   }
-  
-  /* Deciding where multislice loop should start */ 
-  if (total1 > 0.1*total){
-    loop1 = 0.6*depth;
-  }
-  else{
-    loop1 = 0;
-  }
-  
   
   /* Initialising and allocating memory for FFTW function */
   fftw_complex *in, *out;
@@ -120,7 +148,7 @@ int main()
   /**** Multislice Loop ****/ 
   for(j=loop1; j<depth; j++){
     for (i=0; i<wavefunctionsize; i++){
-      T[i] = cexp(I*sigma*V[i+j*wavefunctionsize]*dz);  
+      T[i] = cexp(-I*sigma*P2[i+j*wavefunctionsize]*dz);  
     }
     for (i=0; i<wavefunctionsize; i++){
       in[i] = T[i]*wavefunction[i];
@@ -141,10 +169,7 @@ int main()
   /****End of Multislice Loop****/ 
 
 
-  /* Accounting for Abberations */
-  abbfunction = malloc((wavefunctionsize)*sizeof(double)); /* Abberation function */ 
-  PSF = malloc((wavefunctionsize)*sizeof(double complex)); /* Point spread of "optical transfer function" */
-
+  /* Accounting for Abberations (spherical and defocus) */
   for (i=0; i<wavefunctionsize; i++){
     in[i] = wavefunction[i];
   }
@@ -152,8 +177,8 @@ int main()
   fftw_execute(plan); 
  
   for (i=0; i<wavefunctionsize; i++){
-    abbfunction[i] = 2*pi/wavelength; /* (pi*wavelength*(k_x2[i]+k_y2[i]))*((0.5*abberation*pow(wavelength,2)*(k_x2[i]+k_y2[i]))-df); */ 
-     PSF[i] = cexp(-I*abbfunction[i]);
+    abbfunction = 2*pi/wavelength; /* (pi*wavelength*(k_x2[i]+k_y2[i]))*((0.5*abberation*pow(wavelength,2)*(k_x2[i]+k_y2[i]))-df); */ 
+    PSF[i] = cexp(-I*abbfunction);
    }
 
   for (i=0; i<wavefunctionsize; i++){
@@ -165,12 +190,13 @@ int main()
   for (i=0; i<wavefunctionsize; i++){
     wavefunction[i] = out[i] / wavefunctionsize;  
   }
+
     
-  /* Outputting the final intensity */ 
+  /* Outputting the final image intensity (square modulus of wavefunction) */ 
   FILE* output;
   output = fopen("output.txt", "w");
   for (i=0; i<wavefunctionsize; i++){   
-    fprintf(output, "%.20lf \n", pow(cabs(wavefunction[i]),2)); /* Output the square modulus of the wavefunction */ 
+    fprintf(output, "%.20lf \n", pow(cabs(wavefunction[i]),2)); 
   }
   fclose(output);
    
@@ -179,6 +205,6 @@ int main()
   fftw_destroy_plan(plan);
   fftw_destroy_plan(planinverse);
   fftw_free(in); fftw_free(out); 
-  free(T), free(P), free(wavefunction),free(x), free(y), free(V), free(k_x2), free(k_y2), free(abbfunction), free(PSF);
+  free(T), free(P), free(wavefunction),free(x), free(y), free(V), free(k_x2), free(k_y2), free(PSF), free(P2); 
 
 }

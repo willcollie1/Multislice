@@ -8,14 +8,15 @@
 #define lightspeed2 8.98755e16 /* Speed of Light Squared */ 
 #define hartree 4.35974e-18 /* How mant hartrees in a Joule */
 #define angstrom 1e-10 /* Angstrom in metres */
-#define abberation 1e-5 /*Coefficient of Spherical Abberation (Microscope constant) */ 
-#define df 180e-9 /* Defocus */
+#define abberation 1.8e-3 /*Coefficient of Spherical Abberation (Microscope constant) */ 
+#define df 94.25e-9 /* Defocus */
 
 
 /* Variable declarations */ 
-int i,j,loop1, height,width,depth,size,wavefunctionsize; 
-double a,b,c,v,total,total1,dx,dy,dz,*x,*y,*V,*abbfunction,*k_x2,*k_y2,wavelength,sigma;
-double complex *T,*P,*wavefunction,*PSF;
+int i,j,loop1, height,width,depth,size,wavefunctionsize,fy, tx, ty, fx; 
+double a,b,c,v,total,total1,dx,dy,dz,*x,*y,*V,abbfunction,*k_x2,*k_y2,wavelength,sigma;
+double complex *T,*P,*wavefunction,*PSF,var,*P2,tl, tr, bl, br;
+char rec;
 
 /* Write width and height to an output file */
 int outputparameters(void){
@@ -27,25 +28,15 @@ int outputparameters(void){
 
 /* Spatial Frequency Calculation (x direction) */ 
 double calck_x2(int width, double dx,double*x){
-  for (i=0; i<wavefunctionsize;i++) {
-    if (x[i] < (width/2)){
-      k_x2[i] = pow((x[i]) / (width*pow(dx,2)),2);
-    }
-    else{
-       k_x2[i] = pow((x[i] - width) / (width*pow(dx,2)),2);
-    }
-  }
-}
+  for (i=0; i<wavefunctionsize;i++){
+    k_x2[i] = pow((x[i]) / (width*pow(dx,2)),2);
+  } 
+}   
 
 /* Spatial frequency Calculation (y direction) */
 double calck_y2(int height, double dy,double*y){
-   for (i=0; i<wavefunctionsize;i++) {
-    if (y[i] < (height/2)) {
+   for (i=0; i<wavefunctionsize;i++){
       k_y2[i] = pow((y[i]) / (height*pow(dy,2)),2);
-    }
-    else{
-       k_y2[i] = pow((y[i] - height) / (height*pow(dy,2)),2);
-    }
    }
 }
 
