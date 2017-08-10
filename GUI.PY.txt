@@ -1,0 +1,108 @@
+#Presents the user with a Graphical User Interface where they can insert their input parameters 
+
+from Tkinter import *
+
+def close_window():
+    global entry
+    a = E_1.get()
+    b = E_2.get()
+    c = E_3.get()
+    width = E_4.get()
+    height = E_5.get()
+    depth = E_6.get()
+    voltage = E_7.get()
+    edose = E_8.get()
+    abberation = E_9.get()
+    unitcell = checkCmd
+    filename = E_10.get()
+  
+    #Write Variables from GUI to a file called userinput.txt
+    fo = open("userinput.txt", "wb")
+    fo.write("%f\n%f\n%f\n%f\n%f\n%f\n%f\n%f\n%f\n%d\n%s\n" % (float(a),float(b),float(c),float(width),float(height),float(depth),float(voltage), float(edose),float(abberation),checkCmd.get(),filename));
+    fo.close()
+
+ 
+    root.destroy()
+
+root = Tk()
+
+checkCmd = IntVar()
+checkCmd.set(0)
+
+
+
+root.configure(background="#a1dbcd")
+root.title("Multislice TEM Simulation")
+
+label_1 = Label(root,text = "Lattice parameter a (Angstroms) ")
+label_1.grid(row=0)
+
+label_2 = Label(root,text = "Lattice parameter b (Angstroms) ")
+label_2.grid(row=1)
+
+label_3 = Label(root,text = "Lattice parameter c (Angstroms) ")
+label_3.grid(row=2)
+
+label_4 = Label(root,text = "Width (Voxels):")
+label_4.grid(row=3)
+
+label_5 = Label(root,text = "Height (Voxels): ")
+label_5.grid(row=4)
+
+label_6 = Label(root,text = "Depth (Voxels): ")
+label_6.grid(row=5)
+
+label_7 = Label(root,text = "Microscope Voltage:")
+label_7.grid(row=6)
+
+label_8 = Label(root,text = "Electron Dose:")
+label_8.grid(row=7)
+
+label_9 = Label(root,text = "Spherical Abberation (m) ")
+label_9.grid(row=8)
+
+label_10 = Label(root,text = "Filename: ")
+label_10.grid(row=9)
+
+E_1 = Entry(root)
+E_1.grid(row=0,column=1)
+
+E_2 = Entry(root)
+E_2.grid(row=1,column=1)
+
+E_3 = Entry(root)
+E_3.grid(row=2,column=1)
+
+E_4 = Entry(root)
+E_4.grid(row=3,column=1)
+
+E_5 = Entry(root)
+E_5.grid(row=4,column=1)
+
+E_6 = Entry(root)
+E_6.grid(row=5,column=1)
+
+E_7 = Entry(root)
+E_7.grid(row=6,column=1)
+
+E_8 = Entry(root)
+E_8.grid(row=7,column=1)
+
+E_9 = Entry(root)
+E_9.grid(row=8,column=1)
+
+E_10 = Entry(root)
+E_10.grid(row=9,column=1)
+
+c1 = Checkbutton(root,variable=checkCmd, onvalue=1, offvalue=0, text = "Rectangular Unit Cell?")
+c1.grid(row=0, column = 2)
+
+B = Button(root, text = "OK", command = close_window)
+B.grid(row=7,column=7)
+
+root.mainloop()
+
+
+
+
+

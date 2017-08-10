@@ -6,11 +6,15 @@ from PIL import Image #Image Processing
 import numpy as np #Poisson Distribution
 
 
-#Unzip the potential file (if it isn't already unzipped)
-unzipping = os.system("bzip2 -dk 'Example Potential file .pot_fmt'.bz2")
+compiling = os.system("gcc multislice.c -o multislice -lfftw3 -lm")
+
+filename = raw_input('Enter a filename:' )
 
 #Uses Linux sort to reorder the input file to row major format.
-reordering = os.system("sort -n -k3,3 -k2,2 -k1,1 < graphene.txt > output1.txt")  
+string = "sort -n -k3,3 -k2,2 -k1,1 < "
+string1 = "> orderedfile.txt"
+cmd = string + filename + string1
+reordering = os.system(cmd)  
 
 #Runs the multislice C program
 var = os.system("./multislice")
@@ -27,8 +31,8 @@ List = open("output.txt").readlines()
 edose = 152665 
 
 #Drawing a random number from a Poission distribution centred on edose
-for j in range (0,size):
-  List[j] = np.random.poisson(float(List[j])*edose) #generalise this
+#for j in range (0,size):
+ #  List[j] = np.random.poisson(float(List[j])*edose) #generalise this
 
 #Normalise intensity values so that they fill the range 0-255 (8 bit binary)
 maximum = max(List)
@@ -36,6 +40,7 @@ minimum = min(List)
 for i in range (0,size):
     List[i] =  255*(float(List[i])-float(minimum))/(float(maximum) - float(minimum))
     List[i] = int(List[i])
+
 
 #Create greyscale image with the given intensity values.
 newim = Image.new('L', (height,width))
