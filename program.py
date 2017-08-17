@@ -5,28 +5,41 @@ import os #Run linux commands from Python program
 from PIL import Image #Image Processing
 import numpy as np #Poisson Distribution
 
+def sort_file(input_filename, output_filename):
+    subprocess.call(['sort -n -k3,3 -k2,2 -k1,1 <"$1" >"$2"', '_',
+                     input_filename, output_filename],
+                    shell=True)
 
-compiling = os.system("gcc multislice.c -o multislice -lfftw3 -lm")
+def sort_fileside(input_filename, output_filename):
+    subprocess.call(['sort -n -k1,1 -k2,2 -k3,3 <"$1" >"$2"', '_',
+                     input_filename, output_filename],
+                    shell=True)
 
-filename = raw_input('Enter a filename:' )
-sideview = raw_input(' Normal view (0), Side view(1):' )
+subprocess.call("gcc multislice.c -o multislice -lfftw3 -lm", shell = True)
 
-#Uses Linux sort to reorder the input file to row major format.
-string = "sort -n -k3,3 -k2,2 -k1,1 < "
-string1 = "> orderedfile.txt"
-string2 = "sort -n -k1,1 -k2,2 -k3,3 < "
+subprocess.call("python GUI.py", shell = True)
+
+sideview = int(open('userinput.txt', 'r').readlines()[11])
+edose = int(open('userinput.txt', 'r').readlines()[7])
+retile1 = int(open('userinput.txt', 'r').readlines()[12])
+retile2 = int(open('userinput.txt', 'r').readlines()[13])
 
 
-if(int(sideview) == 0):
-    cmd = string + filename + string1
-    reordering = os.system(cmd)
-#else:
- #   cmd = string2 + filename + string1
-  #  reordering = os.system(cmd)
+if(sideview == 0):
+    sort_file(
+        open('userinput.txt', 'r').readlines()[10].rstrip('\n'),
+        'orderedfile.txt',
+    )
+
+elif(sideview == 1):
+    sort_fileside(
+        open('userinput.txt', 'r').readlines()[10].rstrip('\n'),
+        'orderedfile.txt',
+    )
 
 
 #Runs the multislice C program
-var = os.system("./multislice")
+subprocess.call("./multislice", shell = True)
 
 #Reads in array parameters from multislice
 parameters = open("size.txt").readlines()
@@ -37,11 +50,10 @@ size = height*int(width)
 #Read in intensity values from multislice.c and create a list
 List = open("output.txt").readlines()
 
-edose = 200000
 
 #Drawing a random number from a Poission distribution centred on edose
 for j in range (0,size):
-  List[j] = np.random.poisson(float(List[j])*edose) #generalise this
+  List[j] = np.random.poisson(float(List[j])*edose) 
 
 #Normalise intensity values so that they fill the range 0-255 (8 bit binary)
 maximum = max(List)
@@ -51,34 +63,34 @@ for i in range (0,size):
     List[i] = int(List[i])
 
 
-#######################REMAPPINGCODE FOR NANOWIRE1 SIDE VIEW ################################
-#number1 = int(0.7*size)
-#number2 = int(0.3*size)
-#
-#for i in range (number1,size):
-#   List[i-number2] = List[i]
+# If the image needs a verticle retile
+if(retile1 == 1):
+    number1 = int(0.7*size)
+    number2 = int(0.3*size)
 
-#for i in range (0,number2):
- #   List[i+ number1] = List[i] 
-  #  List[i] = 0 
+    for i in range (number1,size):
+        List[i-number2] = List[i]
 
-
-#########################REMAPPINGCODE FOR NANOWIRE2 SIDE VIEW #####################################
-#New = [None] * size
-#for i in range (0,(width/2)):
- #   for j in range(0,(height/2)):
-  #    New[(size/2+width/2)+i+(j*width)] = List[i+j*width]
-   #   New[i+(j*width)] = List[(size/2+width/2)+i+(j*width)]
-
-#for i in range ((width/2),(width)):
- #   for j in range(0,(height/2)):
-  #    New[(size/2)+(i-(width/2))+(j*width)] = List[i+j*width]
-   #   New[i+(j*width)] = List[(size/2)+(i-(width/2))+(j*width)]
-
-#for i in range (0,size):
- #   List[i] = New[i]
+    for i in range (0,number2):
+        List[i+ number1] = List[i] 
+        List[i] = 0 
 
 
+# If the image needs a Qudrant retile
+if(retile2 == 1):
+    New = [None] * size
+    for i in range (0,(width/2)):
+        for j in range(0,(height/2)):
+            New[(size/2+width/2)+i+(j*width)] = List[i+j*width]
+            New[i+(j*width)] = List[(size/2+width/2)+i+(j*width)]
+
+    for i in range ((width/2),(width)):
+        for j in range(0,(height/2)):
+            New[(size/2)+(i-(width/2))+(j*width)] = List[i+j*width]
+            New[i+(j*width)] = List[(size/2)+(i-(width/2))+(j*width)]
+
+    for i in range (0,size):
+        List[i] = New[i]
 
 
 #Create greyscale image with the given intensity values.

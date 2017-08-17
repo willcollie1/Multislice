@@ -8,10 +8,10 @@
 #define lightspeed2 8.98755e16 /* Speed of Light Squared */ 
 #define hartree 4.35974e-18 /* How mant hartrees in a Joule */
 #define angstrom 1e-10 /* Angstrom in metres */
-#define abberation 1e-6 /*Coefficient of Spherical Abberation (Microscope constant) */ 
+
 
 int i,j,loop1,tilt, height,width,depth,size,wavefunctionsize,fy, tx, ty, fx,unitcellcode,n[2],temp1,sideview; 
-double a,b,c,v,total,total1,dx,dy,dz,*x,*y,*V,abbfunction,*k_x2,*k_y2,wavelength,sigma,df,aperture,tiltx,tilty,*k,tester,kmax,temp;
+double a,b,c,v,total,total1,dx,dy,dz,*x,*y,*V,abbfunction,*k_x2,*k_y2,wavelength,sigma,df,aperture,tiltx,tilty,*k,tester,kmax,temp,abberation;
 double complex *T,*P,*wavefunction,*PSF,var,*P2,tl, tr, bl, br;
 char rec;
 
@@ -21,26 +21,14 @@ fftw_plan plan;
 fftw_plan planinverse;
 
 
-  /* Getting the user input */ 
-  void getuserinput(void){
-    printf("Unit cell code (1-Rectangular, 2-Hexagonal):");
-    scanf("%d",&unitcellcode); 
-    printf("Lattice parameter a (Angstroms):");
-    scanf("%lf",&a);
-    printf("Lattice parameter b (Angstroms):");
-    scanf("%lf",&b); 
-    printf("Lattice Parameter c (Angstroms):");
-    scanf("%lf",&c); 
-    printf("Width:");
-    scanf("%d",&width);  
-    printf("Height:");
-    scanf("%d",&height); 
-    printf("Depth:");
-    scanf("%d",&depth); 
-    printf("Microscope Voltage (volts):");
-    scanf("%lf",&v);
+  /* Importing data from the GUI */
+  void getuserinput(){
+    FILE *inputparam = fopen("userinput.txt", "r");
+        fscanf(inputparam, "%lf %lf %lf %d %d %d %lf %*f %lf %d %*s %d",&a,&b,&c,&width,&height,&depth,&v,&abberation,&unitcellcode,&sideview);
+    fclose(inputparam);
   }
 
+  
   /* Output a file containing the array width and height */
   int outputparameters(void){
     FILE* output2;

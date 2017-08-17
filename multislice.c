@@ -10,7 +10,6 @@
 int main()
 {
 
-sideview = 0;
  
   /* Gets the required input parameters from the user (in angstroms) */  
   getuserinput();
@@ -19,6 +18,7 @@ sideview = 0;
   a = a * angstrom;   
   b = b * angstrom; 
   c = c * angstrom; 
+
   
   /* Swapping a with c and width with depth, consistent with a side view */
   if(sideview == 1){
@@ -53,8 +53,11 @@ sideview = 0;
   if(sideview == 0){
   readinputfile(); 
   }
-  else{
+  else if(sideview == 1){
   readinputfilesideview();
+  }
+  else{
+    return 1;
   }
 
   /* Converts potentials from Hartrees to Volts (energy to volltage),and positions into metres */ 
@@ -68,13 +71,14 @@ sideview = 0;
   /* Working out where the atoms are located (maximising efficiency) */ 
   whereareatoms();
 
+
   /* Calculating the Spatial Frequency squared (reciprical lattice) */ 
   calck_x2(width,dx,x);
   calck_y2(height,dy,y);
 
 
   /* If the unit cell is Hexagonal, follow this step of the loop */ 
-  if(unitcellcode == 2){
+  if(unitcellcode == 1){
    calck_x2H(width,dx,x);
    calck_y2H(height,dy,y);
    hexagonalsampling();
@@ -82,7 +86,7 @@ sideview = 0;
   }
 
   /* If the unit cell is rectangular then no remapping/interpolation is needed */ 
-  if(unitcellcode == 1){
+  if(unitcellcode == 0){
     for(i=0;i<size;i++){
       P2[i] = V[i];
     }
