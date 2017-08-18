@@ -1,5 +1,3 @@
-/* This C program uses the multislice approximation to simulate the wavefunction for electrons in a TEM as they pass through a thin sample. The multislice method reduces to a succession of transmission and propagation operations with a Fast Fourier Transform (FFT) inbetween each. FFTs are calculated using the FFTW libary. The square modulus of the exit wavefunction is (once abberations are accounted for) outputted to the file called "output.txt", which is used by the python script "program.py" to create an image of the specimin */ 
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>    /* Use of pow function */ 
@@ -10,16 +8,14 @@
 int main()
 {
 
- 
   /* Gets the required input parameters from the user (in angstroms) */  
   getuserinput();
-   
+  
   /* Converting lattice parameters to S.I units */ 
   a = a * angstrom;   
   b = b * angstrom; 
   c = c * angstrom; 
 
-  
   /* Swapping a with c and width with depth, consistent with a side view */
   if(sideview == 1){
   temp = a;
@@ -37,7 +33,6 @@ int main()
   dz = (c / depth);  /* Slicethickness */ 
   size = height*width*depth; /* The number of potential readings in file */
   wavefunctionsize = height*width; /* Number of points wavefunction is evaluated at */
-
 
   /* Outputs the wavefunction parameters to the file "size.text" to be used by the python script */ 
   outputparameters();
@@ -67,15 +62,12 @@ int main()
     y[i] = y[i] * dy;
   }
 
-
   /* Working out where the atoms are located (maximising efficiency) */ 
   whereareatoms();
-
 
   /* Calculating the Spatial Frequency squared (reciprical lattice) */ 
   calck_x2(width,dx,x);
   calck_y2(height,dy,y);
-
 
   /* If the unit cell is Hexagonal, follow this step of the loop */ 
   if(unitcellcode == 1){
@@ -108,8 +100,8 @@ int main()
   df = pow(1.5*abberation*wavelength,0.5); /* Optimum defocus */ 
   aperture = pow(((4*wavelength)/abberation),0.25); /* Optimum Aperture size */
   for (i=0; i<wavefunctionsize; i++){
-    k[i] = pow((k_x2[i]+k_y2[i]),0.5);
-    if(k[i] <= aperture){
+    k = pow((k_x2[i]+k_y2[i]),0.5);
+    if(k <= aperture){
       abbfunction = (pi*wavelength*(k_x2[i]+k_y2[i]))*((0.5*abberation*pow(wavelength,2)*(k_x2[i]+k_y2[i]))-df); 
       PSF[i] = cexp(-I*abbfunction);
     }
@@ -120,7 +112,6 @@ int main()
   }
 
   /* Initialising FFTW arrays */
-  n[2];
   n[0] = width;
   n[1] = height;
   in = (fftw_complex*) fftw_malloc(sizeof(fftw_complex) * wavefunctionsize);
@@ -129,7 +120,7 @@ int main()
   planinverse = fftw_plan_dft_2d(height, width, in, out, FFTW_BACKWARD, FFTW_ESTIMATE);
 
 
-    /* Initialising the wavefunction */
+  /* Initialising the wavefunction */
   for (i=0; i<wavefunctionsize; i++){
     wavefunction[i] = 1.;
   }
