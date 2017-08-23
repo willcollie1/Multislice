@@ -26,6 +26,17 @@ int main()
   width = depth;
   depth = temp1;
   }
+
+  /* Swapping a with c and width with depth, consistent with a side view */
+  if(topview == 1){
+  temp = b;
+  b = c;
+  c = temp;
+
+  temp1 = height;
+  height = depth ;
+  depth = temp1;
+  }
     
   /* Size of an individual voxel */
   dx = (a / width);
@@ -45,14 +56,16 @@ int main()
   allocatememory();
 
   /* Reads in the correctly ordered potential file "ordered.txt" */ 
-  if(sideview == 0){
-  readinputfile(); 
+  if(sideview == 0 && topview == 0){
+    readinputfile(); 
   }
-  else if(sideview == 1){
-  readinputfilesideview();
+
+  if(sideview == 1){
+    readinputfilesideview();
   }
-  else{
-    return 1;
+
+  if(topview == 1){
+    readinputfiletopview();
   }
 
   /* Converts potentials from Hartrees to Volts (energy to volltage),and positions into metres */ 

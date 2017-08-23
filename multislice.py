@@ -15,24 +15,37 @@ def sort_fileside(input_filename, output_filename):
                      input_filename, output_filename],
                     shell=True)
 
+def sort_filetop(input_filename, output_filename):
+    subprocess.call(['sort -n -k2,2 -k3,3 -k1,1 <"$1" >"$2"', '_',
+                     input_filename, output_filename],
+                    shell=True)
+
+
 subprocess.call("gcc multislice.c -o multislice -lfftw3 -lm", shell = True)
 
 subprocess.call("python GUI.py", shell = True)
 
 parameters = open('userinput.txt', 'r').readlines()
 sideview = int(parameters[11])
+topview = int(parameters[14])
 edose = int(parameters[7])
 retile1 = int(parameters[12])
 retile2 = int(parameters[13])
 
-if(sideview == 0):
+if(sideview == 0 and topview ==0):
     sort_file(
         parameters[10].rstrip('\n'),
         'orderedfile.txt',
     )
 
-elif(sideview == 1):
+if(sideview == 1):
     sort_fileside(
+        parameters[10].rstrip('\n'),
+        'orderedfile.txt',
+    )
+
+if(topview == 1):
+    sort_filetop(
         parameters[10].rstrip('\n'),
         'orderedfile.txt',
     )
