@@ -26,25 +26,23 @@ subprocess.call("gcc multislice.c -o multislice -lfftw3 -lm", shell = True)
 subprocess.call("python GUI.py", shell = True)
 
 parameters = open('userinput.txt', 'r').readlines()
-sideview = int(parameters[11])
-topview = int(parameters[14])
 edose = int(parameters[7])
-retile1 = int(parameters[12])
-retile2 = int(parameters[13])
+retile = int(parameters[11])
+view = int(parameters[12])
 
-if(sideview == 0 and topview ==0):
+if(view == 0):
     sort_file(
         parameters[10].rstrip('\n'),
         'orderedfile.txt',
     )
 
-if(sideview == 1):
+if(view == 1):
     sort_fileside(
         parameters[10].rstrip('\n'),
         'orderedfile.txt',
     )
 
-if(topview == 1):
+if(view == 2):
     sort_filetop(
         parameters[10].rstrip('\n'),
         'orderedfile.txt',
@@ -78,7 +76,7 @@ for i in range (0,size):
 
 # If the image needs a verticle retile
 New = [None] * size
-if(retile1 == 1):
+if(retile == 1):
     number1 = int(0.7*size)
     number2 = int(0.3*size)
     number3 = int(0.5*size)
@@ -97,7 +95,7 @@ if(retile1 == 1):
         List[i] = New[i]
 
 # If the image needs a Qudrant retile
-if(retile2 == 1):
+if(retile == 2):
     for i in range (0,(width/2)):
         for j in range(0,(height/2)):
             New[(size/2+width/2)+i+(j*width)] = List[i+j*width]

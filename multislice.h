@@ -9,7 +9,7 @@
 
 /* Initialisations */ 
 int i,j,loop1,tilt, height,width,depth,size,wavefunctionsize;
-int fy, tx, ty, fx,unitcellcode,n[2],temp1,sideview,topview; 
+int fy, tx, ty, fx,unitcellcode,n[2],temp1,view; 
 double a,b,c,v,total,total1,dx,dy,dz,*x,*y,*V,abbfunction,*k_x2,*k_y2;
 double wavelength,sigma,df,aperture,tiltx,tilty,tester,kmax,temp,abberation,k;
 double complex *T,*P,*wavefunction,*PSF,var,*P2,tl, tr, bl, br;
@@ -21,7 +21,7 @@ fftw_plan planinverse;
   /* Importing data from the GUI */
   void getuserinput(){
     FILE *inputparam = fopen("userinput.txt", "r");
-        fscanf(inputparam, "%lf %lf %lf %d %d %d %lf %*f %lf %d %*s %d %*d %*d %d ",&a,&b,&c,&width,&height,&depth,&v,&abberation,&unitcellcode,&sideview,&topview);
+        fscanf(inputparam, "%lf %lf %lf %d %d %d %lf %*f %lf %d %*s %*d %d ",&a,&b,&c,&width,&height,&depth,&v,&abberation,&unitcellcode,&view);
     fclose(inputparam);
   }
 

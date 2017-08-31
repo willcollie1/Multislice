@@ -10,14 +10,14 @@ int main()
 
   /* Gets the required input parameters from the user (in angstroms) */  
   getuserinput();
-  
+
   /* Converting lattice parameters to S.I units */ 
   a = a * angstrom;   
   b = b * angstrom; 
   c = c * angstrom; 
 
   /* Swapping a with c and width with depth, consistent with a side view */
-  if(sideview == 1){
+  if(view == 1){
   temp = a;
   a = c;
   c = temp;
@@ -28,7 +28,7 @@ int main()
   }
 
   /* Swapping a with c and width with depth, consistent with a side view */
-  if(topview == 1){
+  if(view == 2){
   temp = b;
   b = c;
   c = temp;
@@ -56,15 +56,15 @@ int main()
   allocatememory();
 
   /* Reads in the correctly ordered potential file "ordered.txt" */ 
-  if(sideview == 0 && topview == 0){
+  if(view == 0){
     readinputfile(); 
   }
 
-  if(sideview == 1){
+  if(view == 1){
     readinputfilesideview();
   }
 
-  if(topview == 1){
+  if(view == 2){
     readinputfiletopview();
   }
 
